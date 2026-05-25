@@ -1,367 +1,701 @@
 /* ============================================================
-   ZOMATO CLONE — script.js
-   Animations · Interactions · Dynamic UI
+   ZOMATO — script.js
+   Features:
+     1.  Loading screen
+     2.  Sticky header with scroll class
+     3.  DOM enhancement — food items (circular + label)
+     4.  DOM enhancement — brand items (circular + label)
+     5.  Restaurant cards — location-driven dynamic rendering
+     6.  Intersection Observer — scroll reveal animations
+     7.  Search live filter
+     8.  Smooth section initialisation
    ============================================================ */
 
-(function () {
-  "use strict";
+'use strict';
 
-  /* ── Data ─────────────────────────────────────────────────── */
+/* ============================================================
+   ① DATA — Restaurant catalogue per city
+   ============================================================ */
 
-  const RESTAURANTS = [
-    { name: "Burger Barn",      emoji: "🍔", rating: "4.3", time: "25 min", tag: "Bestseller" },
-    { name: "Spice Garden",     emoji: "🍛", rating: "4.6", time: "35 min", tag: "Top Rated"  },
-    { name: "Pizza Paradiso",   emoji: "🍕", rating: "4.1", time: "30 min", tag: "New"        },
-    { name: "Sushi Street",     emoji: "🍣", rating: "4.8", time: "45 min", tag: "Top Rated"  },
-    { name: "Taco Fiesta",      emoji: "🌮", rating: "4.2", time: "20 min", tag: "Popular"    },
-    { name: "The Biryani Co.",  emoji: "🍲", rating: "4.7", time: "40 min", tag: "Bestseller" },
-    { name: "Wok & Roll",       emoji: "🍜", rating: "4.4", time: "28 min", tag: ""           },
-    { name: "Dessert House",    emoji: "🍰", rating: "4.5", time: "15 min", tag: "Sweet Spot" },
-  ];
+/** Colour swatches used to generate placeholder gradients */
+const GRAD_PALETTES = [
+  ['#FF6B6B', '#FFE66D'],
+  ['#a18cd1', '#fbc2eb'],
+  ['#ffecd2', '#fcb69f'],
+  ['#a1c4fd', '#c2e9fb'],
+  ['#fd7f6f', '#f9d423'],
+  ['#43e97b', '#38f9d7'],
+  ['#f093fb', '#f5576c'],
+  ['#4facfe', '#00f2fe'],
+  ['#fa709a', '#fee140'],
+  ['#30cfd0', '#667eea'],
+];
 
-  const SEARCH_SUGGESTIONS = [
-    { icon: "🍕", text: "Pizza" },
-    { icon: "🍔", text: "Burgers" },
-    { icon: "🍛", text: "Biryani" },
-    { icon: "🍣", text: "Sushi" },
-    { icon: "🌮", text: "Tacos" },
-    { icon: "🍜", text: "Noodles" },
-    { icon: "🥗", text: "Salads" },
-    { icon: "🍰", text: "Desserts" },
-    { icon: "☕", text: "Café & Beverages" },
-  ];
+/** Returns a deterministic gradient for a given index */
+const gradFor = (i) => GRAD_PALETTES[i % GRAD_PALETTES.length];
 
-  /* ── DOM Build ─────────────────────────────────────────────── */
+/**
+ * Restaurant data keyed by location value (matches <select> options).
+ * Each entry: { name, cuisine, discount, rating, mins, km }
+ */
+const RESTAURANT_DATA = {
+  Bangalore: [
+    { name: "Meghana Foods",       cuisine: "Biryani, North Indian",  discount: "50% off up to ₹100", rating: 4.3, mins: "25–30 min", km: "1.2 km" },
+    { name: "CTR Shri Sagar",      cuisine: "South Indian",           discount: "Free delivery",       rating: 4.5, mins: "35–40 min", km: "2.1 km" },
+    { name: "Empire Restaurant",   cuisine: "Kebabs, Rolls, Biryani", discount: "20% off on ₹299+",   rating: 4.1, mins: "20–25 min", km: "0.8 km" },
+    { name: "Truffles",            cuisine: "Burgers, American",      discount: "30% off up to ₹120", rating: 4.6, mins: "30–35 min", km: "1.8 km" },
+    { name: "Brahmin's Coffee Bar",cuisine: "Breakfast, South Indian",discount: "Free delivery",       rating: 4.4, mins: "40–45 min", km: "3.2 km" },
+    { name: "Domino's Pizza",      cuisine: "Pizzas, Pastas",         discount: "2 Pizzas @ ₹599",    rating: 3.9, mins: "25–35 min", km: "1.0 km" },
+    { name: "KFC",                 cuisine: "Burgers, Chicken",       discount: "15% off on app",      rating: 4.0, mins: "20–25 min", km: "0.6 km" },
+    { name: "Vidyarthi Bhavan",    cuisine: "South Indian, Idli",     discount: "10% off on ₹200+",   rating: 4.7, mins: "45–50 min", km: "4.1 km" },
+  ],
+  Delhi: [
+    { name: "Paranthe Wali Gali",  cuisine: "North Indian, Parathas", discount: "20% off on ₹249+",   rating: 4.4, mins: "30–40 min", km: "2.5 km" },
+    { name: "Karim's",             cuisine: "Mughlai, Kebabs",        discount: "Free delivery",       rating: 4.6, mins: "35–45 min", km: "3.0 km" },
+    { name: "Moti Mahal",          cuisine: "North Indian, Butter Chicken", discount: "25% off up to ₹150", rating: 4.2, mins: "28–35 min", km: "1.9 km" },
+    { name: "Sagar Ratna",         cuisine: "South Indian",           discount: "15% off",             rating: 4.0, mins: "25–30 min", km: "1.1 km" },
+    { name: "Haldiram's",          cuisine: "Sweets, Snacks, Thali",  discount: "Buy 2 Get 1 Free",    rating: 4.3, mins: "20–25 min", km: "0.9 km" },
+    { name: "Pizza Hut",           cuisine: "Pizzas, Pasta",          discount: "BOGO on weekends",    rating: 3.8, mins: "30–40 min", km: "1.4 km" },
+    { name: "Nathu's Sweets",      cuisine: "Sweets, Namkeen",        discount: "10% cashback",        rating: 4.5, mins: "35–40 min", km: "2.2 km" },
+    { name: "Rolls Mania",         cuisine: "Rolls, Wraps, Frankies", discount: "40% off up to ₹80",  rating: 4.1, mins: "15–20 min", km: "0.5 km" },
+  ],
+  Patna: [
+    { name: "Hotel Maurya",        cuisine: "North Indian, Thali",    discount: "20% off on ₹199+",   rating: 4.2, mins: "25–30 min", km: "1.3 km" },
+    { name: "Kundan Confectionary",cuisine: "Sweets, Bakery",         discount: "Free delivery",       rating: 4.5, mins: "30–35 min", km: "1.8 km" },
+    { name: "Bihari Tadka",        cuisine: "Bihari, Litti Chokha",   discount: "10% cashback",        rating: 4.4, mins: "20–25 min", km: "0.7 km" },
+    { name: "Domino's Pizza",      cuisine: "Pizzas, Garlic Bread",   discount: "2 Pizzas @ ₹499",    rating: 3.9, mins: "25–35 min", km: "1.0 km" },
+    { name: "Hotel Chanakya",      cuisine: "Multi-cuisine, Buffet",  discount: "25% off on ₹399+",   rating: 4.1, mins: "35–40 min", km: "2.5 km" },
+    { name: "Kanha Sweets",        cuisine: "Sweets, Chaat",          discount: "Buy 1 Get 1 Free",    rating: 4.3, mins: "18–22 min", km: "0.5 km" },
+    { name: "The Yellow Chilli",   cuisine: "North Indian, Punjabi",  discount: "30% off up to ₹130", rating: 4.0, mins: "28–35 min", km: "1.6 km" },
+    { name: "Pizza Hut",           cuisine: "Pizzas, Pasta",          discount: "50% off on 1st order",rating: 3.8, mins: "30–40 min", km: "2.0 km" },
+  ],
+  Gandhinagar: [
+    { name: "Honest Restaurant",   cuisine: "Gujarati, Thali",        discount: "20% off on ₹199+",   rating: 4.5, mins: "25–30 min", km: "1.1 km" },
+    { name: "Agashiye",            cuisine: "Gujarati Cuisine",       discount: "Free delivery",       rating: 4.7, mins: "40–50 min", km: "3.2 km" },
+    { name: "Gordhan Thal",        cuisine: "Gujarati, Rajasthani",   discount: "15% cashback",        rating: 4.3, mins: "30–35 min", km: "1.9 km" },
+    { name: "Pizza Hut",           cuisine: "Pizzas, Pasta",          discount: "BOGO on weekends",    rating: 3.9, mins: "25–30 min", km: "0.8 km" },
+    { name: "KFC",                 cuisine: "Burgers, Fried Chicken", discount: "10% off on app",      rating: 4.0, mins: "20–25 min", km: "0.6 km" },
+    { name: "Swad Restaurant",     cuisine: "North Indian, Chinese",  discount: "30% off up to ₹120", rating: 4.1, mins: "22–28 min", km: "1.0 km" },
+  ],
+  Gurgaon: [
+    { name: "Punjab Grill",        cuisine: "North Indian, Punjabi",  discount: "25% off on ₹299+",   rating: 4.4, mins: "30–35 min", km: "1.7 km" },
+    { name: "Andhra Bhavan",       cuisine: "South Indian, Andhra",   discount: "Free delivery",       rating: 4.6, mins: "35–40 min", km: "2.4 km" },
+    { name: "Wow! Momo",           cuisine: "Momos, Rolls",           discount: "20% off on ₹249+",   rating: 4.1, mins: "20–25 min", km: "0.8 km" },
+    { name: "McDonald's",          cuisine: "Burgers, Fries",         discount: "McSaver @ ₹99",       rating: 4.0, mins: "18–22 min", km: "0.5 km" },
+    { name: "Social",              cuisine: "Continental, Bar",       discount: "Happy Hours 4–7 PM",  rating: 4.3, mins: "30–40 min", km: "2.1 km" },
+    { name: "Barbeque Nation",     cuisine: "BBQ, North Indian",      discount: "Kids free under 5",   rating: 4.5, mins: "40–50 min", km: "3.0 km" },
+    { name: "La Pino'z Pizza",     cuisine: "Pizzas, Pasta",          discount: "40% off 1st order",   rating: 3.8, mins: "25–30 min", km: "1.2 km" },
+  ],
+  Kolkata: [
+    { name: "Peter Cat",           cuisine: "Continental, Mughlai",   discount: "20% off on ₹399+",   rating: 4.5, mins: "35–45 min", km: "2.8 km" },
+    { name: "Mocambo",             cuisine: "Continental, Kebabs",    discount: "Free dessert on ₹500",rating: 4.6, mins: "40–50 min", km: "3.5 km" },
+    { name: "Arsalan",             cuisine: "Biryani, Mughlai",       discount: "50% off up to ₹100", rating: 4.4, mins: "30–35 min", km: "2.0 km" },
+    { name: "Tibetan Delight",     cuisine: "Momos, Tibetan",         discount: "10% cashback",        rating: 4.2, mins: "20–25 min", km: "1.0 km" },
+    { name: "Flurys",              cuisine: "Bakery, Cafe, Desserts", discount: "15% off on cakes",    rating: 4.5, mins: "25–30 min", km: "1.5 km" },
+    { name: "KFC",                 cuisine: "Burgers, Fried Chicken", discount: "Bucket @ ₹499",       rating: 3.9, mins: "20–28 min", km: "0.7 km" },
+    { name: "Domino's Pizza",      cuisine: "Pizzas, Pasta",          discount: "2 Mediums @ ₹449",   rating: 3.8, mins: "28–35 min", km: "1.3 km" },
+  ],
+  Lakhisarai: [
+    { name: "Shri Krishna Bhojnalaya", cuisine: "Bihari Thali, Dal Bati", discount: "Free delivery",  rating: 4.2, mins: "15–20 min", km: "0.4 km" },
+    { name: "Mithu Sweets",        cuisine: "Sweets, Namkeen",        discount: "10% off on ₹199+",   rating: 4.4, mins: "12–18 min", km: "0.3 km" },
+    { name: "Hotel Raj",           cuisine: "North Indian, Rice",     discount: "20% cashback",        rating: 3.9, mins: "20–25 min", km: "0.8 km" },
+    { name: "Chandan Dhaba",       cuisine: "Dhaba-style, Chicken",   discount: "Combo meal @ ₹149",  rating: 4.1, mins: "18–22 min", km: "0.6 km" },
+  ],
+};
 
-  function buildMain() {
-    const main = document.querySelector("main");
+/* ============================================================
+   ② LOADING SCREEN
+   ============================================================ */
 
-    /* Hero */
-    main.insertAdjacentHTML("beforeend", `
-      <section class="hero">
-        <h1 class="hero-title">
-          Hungry? <span>We've got you</span><br>covered.
-        </h1>
-        <p class="hero-subtitle">
-          Order from 10,000+ restaurants. Hot food delivered fast — right to your door.
-        </p>
-        <a class="hero-cta ripple-host" href="#">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 5h12"/><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/></svg>
-          Order Now
-        </a>
-      </section>
-    `);
+/**
+ * Injects a loading overlay into the DOM and removes it once
+ * the page has finished loading.
+ */
+function initLoadingScreen() {
+  const screen = document.createElement('div');
+  screen.id = 'loading-screen';
+  screen.innerHTML = `
+    <div class="loader-brand">zomato</div>
+    <div class="loader-tagline">Discover · Order · Enjoy</div>
+    <div class="loader-track"><div class="loader-fill"></div></div>
+  `;
+  document.body.prepend(screen);
 
-    /* Offer Banner */
-    main.insertAdjacentHTML("beforeend", `
-      <div class="offer-banner" id="offerBanner">
-        <div class="offer-text">
-          <h3>🔥 Up to 60% OFF on your first order!</h3>
-          <p>Use code <strong>ZOMFIRST</strong> at checkout. Limited time offer.</p>
-        </div>
-        <button class="offer-btn ripple-host" onclick="copyCode()">Copy Code</button>
-      </div>
-    `);
-
-    /* Restaurant Cards */
-    main.insertAdjacentHTML("beforeend", `
-      <section class="section">
-        <div class="section-header">
-          <h2 class="section-title">Popular Near You</h2>
-          <span class="section-sub">Updated just now</span>
-        </div>
-        <div class="card-grid" id="cardGrid"></div>
-      </section>
-    `);
-
-    buildCards();
-    wrapSearchWithSuggestions();
-  }
-
-  function buildCards() {
-    const grid = document.getElementById("cardGrid");
-    if (!grid) return;
-
-    RESTAURANTS.forEach((r, i) => {
-      const card = document.createElement("div");
-      card.className = "card ripple-host";
-      card.style.animationDelay = `${0.05 * i}s`;
-      card.innerHTML = `
-        <div class="card-img">${r.emoji}</div>
-        <div class="card-body">
-          <div class="card-name">${r.name}</div>
-          <div class="card-info">
-            <span class="badge">⭐ ${r.rating}</span>
-            ${r.tag ? `<span class="badge red">${r.tag}</span>` : ""}
-            <span>· ${r.time}</span>
-          </div>
-        </div>
-      `;
-      card.addEventListener("click", () => showToast(`Opening ${r.name}...`));
-      card.addEventListener("click", rippleEffect);
-      grid.appendChild(card);
-    });
-  }
-
-  function wrapSearchWithSuggestions() {
-    const searchInput = document.getElementById("search");
-    if (!searchInput) return;
-
-    /* Wrap in relative container */
-    const wrapper = document.createElement("div");
-    wrapper.className = "search-wrapper";
-    searchInput.parentNode.insertBefore(wrapper, searchInput);
-    wrapper.appendChild(searchInput);
-
-    /* Suggestions dropdown */
-    const dropdown = document.createElement("div");
-    dropdown.id = "suggestions";
-    SEARCH_SUGGESTIONS.forEach(s => {
-      const item = document.createElement("div");
-      item.className = "suggestion-item";
-      item.innerHTML = `<span class="icon">${s.icon}</span>${s.text}`;
-      item.addEventListener("mousedown", (e) => {
-        e.preventDefault();
-        searchInput.value = s.text;
-        hideSuggestions();
-        showToast(`Searching for "${s.text}"…`);
-      });
-      dropdown.appendChild(item);
-    });
-    wrapper.appendChild(dropdown);
-
-    searchInput.addEventListener("focus", showSuggestions);
-    searchInput.addEventListener("blur", () => setTimeout(hideSuggestions, 150));
-    searchInput.addEventListener("input", filterSuggestions);
-    searchInput.addEventListener("keydown", handleSearchKey);
-  }
-
-  function showSuggestions() {
-    const dd = document.getElementById("suggestions");
-    if (dd) dd.classList.add("active");
-  }
-
-  function hideSuggestions() {
-    const dd = document.getElementById("suggestions");
-    if (dd) dd.classList.remove("active");
-  }
-
-  function filterSuggestions(e) {
-    const val = e.target.value.toLowerCase().trim();
-    const dd = document.getElementById("suggestions");
-    if (!dd) return;
-    const items = dd.querySelectorAll(".suggestion-item");
-    let anyVisible = false;
-    items.forEach(item => {
-      const matches = !val || item.textContent.toLowerCase().includes(val);
-      item.style.display = matches ? "" : "none";
-      if (matches) anyVisible = true;
-    });
-    dd.classList.toggle("active", anyVisible);
-  }
-
-  function handleSearchKey(e) {
-    if (e.key === "Enter") {
-      const val = e.target.value.trim();
-      if (val) {
-        hideSuggestions();
-        showToast(`Searching for "${val}"…`);
-      }
-      e.preventDefault();
-    }
-    if (e.key === "Escape") hideSuggestions();
-  }
-
-  /* ── Location Change ───────────────────────────────────────── */
-
-  function initLocation() {
-    const sel = document.getElementById("location");
-    if (!sel) return;
-    sel.addEventListener("change", () => {
-      if (sel.value) {
-        showToast(`📍 Location set to ${sel.value}`);
-        /* Animate section heading */
-        const sub = document.querySelector(".section-sub");
-        if (sub) {
-          sub.textContent = `Near ${sel.value} · Updated just now`;
-          sub.style.animation = "none";
-          void sub.offsetWidth; // reflow
-          sub.style.animation = "fadeUp 0.4s both";
-        }
-      }
-    });
-  }
-
-  /* ── Toast ─────────────────────────────────────────────────── */
-
-  let toastTimer = null;
-
-  function showToast(msg) {
-    let toast = document.getElementById("toast");
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = "toast";
-      document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.classList.add("show");
-    clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => toast.classList.remove("show"), 2800);
-  }
-
-  /* ── Copy Offer Code ───────────────────────────────────────── */
-
-  window.copyCode = function () {
-    const code = "ZOMFIRST";
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(code).then(() => showToast(`✅ Code "${code}" copied!`));
-    } else {
-      showToast(`Use code: ${code}`);
-    }
+  // Remove screen after animation + small buffer
+  const dismiss = () => {
+    screen.classList.add('fade-out');
+    // Remove from DOM after transition finishes
+    screen.addEventListener('transitionend', () => screen.remove(), { once: true });
   };
 
-  /* ── Ripple Effect ─────────────────────────────────────────── */
-
-  function rippleEffect(e) {
-    const el = e.currentTarget;
-    const rect = el.getBoundingClientRect();
-    const size = Math.max(rect.width, rect.height);
-    const x = e.clientX - rect.left - size / 2;
-    const y = e.clientY - rect.top  - size / 2;
-
-    const ripple = document.createElement("span");
-    ripple.className = "ripple";
-    Object.assign(ripple.style, {
-      width:  `${size}px`,
-      height: `${size}px`,
-      left:   `${x}px`,
-      top:    `${y}px`,
-    });
-    el.appendChild(ripple);
-    ripple.addEventListener("animationend", () => ripple.remove());
+  if (document.readyState === 'complete') {
+    setTimeout(dismiss, 1700);
+  } else {
+    window.addEventListener('load', () => setTimeout(dismiss, 800));
   }
+}
 
-  /* Attach ripple to hero CTA & offer btn via event delegation */
-  document.addEventListener("click", (e) => {
-    const host = e.target.closest(".ripple-host");
-    if (host) rippleEffect(e);
-  });
+/* ============================================================
+   ③ STICKY HEADER — scroll class
+   ============================================================ */
 
-  /* ── Scroll-reveal for cards ───────────────────────────────── */
+function initStickyHeader() {
+  const header = document.querySelector('header');
+  if (!header) return;
 
-  function initScrollReveal() {
-    if (!("IntersectionObserver" in window)) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach(entry => {
-          if (entry.isIntersecting) {
-            entry.target.style.animationPlayState = "running";
-            observer.unobserve(entry.target);
-          }
-        });
-      },
-      { threshold: 0.12 }
-    );
+  const onScroll = () => {
+    header.classList.toggle('scrolled', window.scrollY > 40);
+  };
 
-    document.querySelectorAll(".card, .section-title, .hero-title, .hero-subtitle, .hero-cta").forEach(el => {
-      el.style.animationPlayState = "paused";
-      observer.observe(el);
-    });
-  }
-
-  /* ── Header shadow on scroll ───────────────────────────────── */
-
-  function initHeaderScroll() {
-    const header = document.querySelector("header");
-    if (!header) return;
-    window.addEventListener("scroll", () => {
-      header.style.boxShadow = window.scrollY > 10
-        ? "0 4px 28px rgba(226,55,68,0.15)"
-        : "0 2px 20px rgba(226,55,68,0.08)";
-    }, { passive: true });
-  }
-
-  /* ── Offer banner enter animation ─────────────────────────── */
-
-  function animateOfferBanner() {
-    const banner = document.getElementById("offerBanner");
-    if (!banner) return;
-    banner.style.opacity = "0";
-    banner.style.transform = "translateY(16px)";
-    banner.style.transition = "opacity 0.6s 0.4s ease, transform 0.6s 0.4s ease";
-    requestAnimationFrame(() => requestAnimationFrame(() => {
-      banner.style.opacity = "1";
-      banner.style.transform = "translateY(0)";
-    }));
-  }
-
-  /* ── Typed placeholder on search ──────────────────────────── */
-
-  function initTypedPlaceholder() {
-    const input = document.getElementById("search");
-    if (!input) return;
-
-    const phrases = [
-      "Search for biryani…",
-      "Search for pizza near you…",
-      "Search your favourite restaurant…",
-      "Search for sushi…",
-      "What are you craving today?",
-    ];
-
-    let pi = 0, ci = 0, deleting = false;
-    let timer;
-
-    function type() {
-      if (document.activeElement === input) {
-        timer = setTimeout(type, 1800);
-        return;
-      }
-      const phrase = phrases[pi];
-      if (!deleting) {
-        ci++;
-        input.placeholder = phrase.slice(0, ci);
-        if (ci === phrase.length) {
-          deleting = true;
-          timer = setTimeout(type, 1800);
-          return;
-        }
-        timer = setTimeout(type, 55);
-      } else {
-        ci--;
-        input.placeholder = phrase.slice(0, ci);
-        if (ci === 0) {
-          deleting = false;
-          pi = (pi + 1) % phrases.length;
-          timer = setTimeout(type, 400);
-          return;
-        }
-        timer = setTimeout(type, 30);
-      }
+  // Throttle to ~60fps
+  let ticking = false;
+  window.addEventListener('scroll', () => {
+    if (!ticking) {
+      requestAnimationFrame(() => { onScroll(); ticking = false; });
+      ticking = true;
     }
-    timer = setTimeout(type, 1200);
+  }, { passive: true });
+
+  onScroll(); // run once on init
+}
+
+/* ============================================================
+   ④ SECTION CLASSIFICATION
+   Adds meaningful class names to each section for CSS targeting.
+   ============================================================ */
+
+function classifySections() {
+  const sections = document.querySelectorAll('main > section');
+  const names = ['food-section', 'brands-section', 'restaurants-section', 'explore-section'];
+  sections.forEach((sec, i) => {
+    if (names[i]) sec.classList.add(names[i]);
+  });
+}
+
+/* ============================================================
+   ⑤ FOOD ITEMS — enhance li > img into circular components
+   ============================================================ */
+
+function initFoodItems() {
+  const section = document.querySelector('.food-section');
+  if (!section) return;
+
+  const ul = section.querySelector('ul');
+  if (!ul) return;
+
+  // Move the h1 outside the ul (it's semantically wrong inside ul)
+  const heading = ul.querySelector('h1');
+  if (heading) {
+    heading.classList.add('section-heading');
+    section.insertBefore(heading, ul);
   }
 
-  /* ── Footer ────────────────────────────────────────────────── */
+  ul.classList.add('food-items-grid', 'stagger-children');
 
-  function buildFooter() {
-    const footer = document.querySelector("footer");
-    if (!footer) return;
-    const year = new Date().getFullYear();
-    footer.innerHTML = `Copyright &copy; ${year} | All rights reserved to <strong>Zomato</strong>.`;
+  // Transform each li > img into a rich food-item component
+  ul.querySelectorAll('li').forEach((li) => {
+    const img = li.querySelector('img');
+    if (!img) return;
+
+    const label = img.alt || '';
+    li.classList.add('food-item');
+
+    // Wrap image in styled ring
+    const ring = document.createElement('div');
+    ring.className = 'food-img-ring';
+    ring.appendChild(img);
+
+    // Label text
+    const span = document.createElement('span');
+    span.className = 'food-label';
+    span.textContent = label;
+
+    li.innerHTML = '';
+    li.appendChild(ring);
+    li.appendChild(span);
+
+    // Ripple effect on click
+    li.addEventListener('click', (e) => createRipple(e, li));
+  });
+}
+
+/* ============================================================
+   ⑥ BRAND ITEMS — same treatment as food items
+   ============================================================ */
+
+function initBrandItems() {
+  const section = document.querySelector('.brands-section');
+  if (!section) return;
+
+  // Wrap content in a constrained inner div
+  const inner = document.createElement('div');
+  inner.className = 'brands-inner';
+  while (section.firstChild) inner.appendChild(section.firstChild);
+  section.appendChild(inner);
+
+  const ul = inner.querySelector('ul');
+  if (!ul) return;
+
+  const heading = ul.querySelector('h2');
+  if (heading) {
+    heading.classList.add('section-heading');
+    inner.insertBefore(heading, ul);
   }
 
-  /* ── Init ───────────────────────────────────────────────────── */
+  ul.classList.add('brands-grid', 'stagger-children');
 
-  document.addEventListener("DOMContentLoaded", () => {
-    buildMain();
-    initLocation();
-    initHeaderScroll();
-    animateOfferBanner();
-    initTypedPlaceholder();
-    /* slight delay so DOM is painted before scroll-reveal attaches */
-    requestAnimationFrame(initScrollReveal);
-    buildFooter();
+  ul.querySelectorAll('li').forEach((li) => {
+    const img = li.querySelector('img');
+    if (!img) return;
+
+    const label = img.alt || '';
+    li.classList.add('brand-item');
+
+    const ring = document.createElement('div');
+    ring.className = 'brand-img-ring';
+    ring.appendChild(img);
+
+    const span = document.createElement('span');
+    span.className = 'brand-label';
+    span.textContent = label;
+
+    li.innerHTML = '';
+    li.appendChild(ring);
+    li.appendChild(span);
+
+    li.addEventListener('click', (e) => createRipple(e, li));
+  });
+}
+
+/* ============================================================
+   ⑦ EXPLORE SECTION — structural cleanup
+   ============================================================ */
+
+function initExploreSection() {
+  const section = document.querySelector('.explore-section');
+  if (!section) return;
+
+  // Wrap everything in a constrained inner div
+  const inner = document.createElement('div');
+  inner.className = 'explore-inner';
+  while (section.firstChild) inner.appendChild(section.firstChild);
+  section.appendChild(inner);
+
+  // Style the eyebrow <p>
+  const eyebrow = inner.querySelector('p');
+  if (eyebrow) eyebrow.classList.add('explore-eyebrow');
+}
+
+/* ============================================================
+   ⑧ RESTAURANT CARDS — dynamic generation
+   ============================================================ */
+
+/**
+ * Creates and returns a single restaurant card element.
+ * @param {Object} data  — restaurant object from RESTAURANT_DATA
+ * @param {number} index — position for gradient selection
+ */
+function createRestaurantCard(data, index) {
+  const [c1, c2] = gradFor(index);
+  const card = document.createElement('div');
+  card.className = 'restaurant-card reveal';
+
+  card.innerHTML = `
+    <div class="card-img-wrap">
+      <div
+        class="card-img-gradient"
+        style="
+          width:100%; height:100%;
+          background: linear-gradient(135deg, ${c1}, ${c2});
+          display:flex; align-items:center; justify-content:center;
+          font-size: 2.8rem;
+        "
+      >${foodEmoji(data.cuisine)}</div>
+      <div class="discount-badge">${data.discount}</div>
+    </div>
+    <div class="card-body">
+      <div class="card-name">${data.name}</div>
+      <div class="card-meta">
+        <span class="rating-tag">
+          <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          ${data.rating}
+        </span>
+        <span class="dot"></span>
+        <span class="card-time">${data.mins}</span>
+        <span class="dot"></span>
+        <span class="card-dist">${data.km}</span>
+      </div>
+      <div class="card-cuisine">${data.cuisine}</div>
+    </div>
+  `;
+
+  // Hover glow on card — subtle red border tint
+  card.addEventListener('mouseenter', () => {
+    card.style.setProperty('--card-glow', c1);
   });
 
+  return card;
+}
+
+/**
+ * Returns a food emoji that loosely matches the cuisine string.
+ */
+function foodEmoji(cuisine = '') {
+  const c = cuisine.toLowerCase();
+  if (c.includes('pizza'))   return '🍕';
+  if (c.includes('biryani')) return '🍛';
+  if (c.includes('burger'))  return '🍔';
+  if (c.includes('momo') || c.includes('tibetan')) return '🥟';
+  if (c.includes('south') || c.includes('dosa'))   return '🥘';
+  if (c.includes('sweet') || c.includes('dessert')) return '🍮';
+  if (c.includes('chicken') || c.includes('kebab')) return '🍗';
+  if (c.includes('roll') || c.includes('wrap'))     return '🌯';
+  if (c.includes('thali') || c.includes('gujarati')) return '🍱';
+  if (c.includes('bakery') || c.includes('cafe'))   return '☕';
+  if (c.includes('chinese') || c.includes('noodle')) return '🍜';
+  if (c.includes('bbq') || c.includes('grill'))     return '🔥';
+  return '🍽️';
+}
+
+/**
+ * Renders skeleton placeholders while "loading".
+ */
+function renderSkeletons(grid, count = 4) {
+  grid.innerHTML = '';
+  for (let i = 0; i < count; i++) {
+    const skel = document.createElement('div');
+    skel.className = 'restaurant-card';
+    skel.innerHTML = `
+      <div class="skeleton" style="height:160px;border-radius:var(--r-md) var(--r-md) 0 0;"></div>
+      <div class="card-body" style="gap:10px;">
+        <div class="skeleton" style="height:18px;width:70%;border-radius:4px;"></div>
+        <div class="skeleton" style="height:14px;width:50%;border-radius:4px;"></div>
+        <div class="skeleton" style="height:12px;width:40%;border-radius:4px;"></div>
+      </div>
+    `;
+    grid.appendChild(skel);
+  }
+}
+
+/**
+ * Renders restaurant cards for the given location value.
+ * Shows a brief skeleton delay to feel "real".
+ */
+function renderRestaurants(locationValue) {
+  const grid = document.getElementById('restaurants-grid');
+  const heading = document.querySelector('.restaurants-section h3');
+  if (!grid) return;
+
+  // Update heading
+  if (heading) {
+    const display = heading.querySelector('#location-name-display') ||
+      (() => {
+        const em = document.createElement('em');
+        em.id = 'location-name-display';
+        heading.textContent = '';
+        heading.appendChild(document.createTextNode(''));
+        heading.appendChild(em);
+        return em;
+      })();
+    heading.childNodes[0].textContent = locationValue ? `${locationValue} ` : '';
+    display.textContent = locationValue ? 'Restaurants' : 'Location Restaurants';
+  }
+
+  if (!locationValue) {
+    grid.innerHTML = `
+      <div class="no-location">
+        <div class="nl-icon">📍</div>
+        <p>Select your location to see restaurants</p>
+        <small>Use the dropdown in the header</small>
+      </div>
+    `;
+    return;
+  }
+
+  const restaurants = RESTAURANT_DATA[locationValue];
+  if (!restaurants || restaurants.length === 0) {
+    grid.innerHTML = `
+      <div class="no-location">
+        <div class="nl-icon">🍽️</div>
+        <p>No restaurants found for <strong>${locationValue}</strong></p>
+        <small>Try selecting a different location</small>
+      </div>
+    `;
+    return;
+  }
+
+  // Skeleton loading feel
+  renderSkeletons(grid, Math.min(restaurants.length, 4));
+
+  setTimeout(() => {
+    grid.innerHTML = '';
+
+    restaurants.forEach((data, i) => {
+      const card = createRestaurantCard(data, i);
+      // Stagger card entrance
+      card.style.transitionDelay = `${i * 0.06}s`;
+      grid.appendChild(card);
+
+      // Trigger reveal in next frame
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => card.classList.add('in-view'));
+      });
+    });
+  }, 550); // simulate API delay
+}
+
+/**
+ * Wires up the location <select> to re-render restaurants on change.
+ */
+function initRestaurantSection() {
+  const section = document.querySelector('.restaurants-section');
+  if (!section) return;
+
+  // Create the grid container if it doesn't exist
+  let grid = document.getElementById('restaurants-grid');
+  if (!grid) {
+    grid = document.createElement('div');
+    grid.id = 'restaurants-grid';
+    section.appendChild(grid);
+  }
+
+  // Initial render (no location selected yet)
+  renderRestaurants(null);
+
+  // Listen for location change
+  const select = document.getElementById('place');
+  if (select) {
+    select.addEventListener('change', (e) => {
+      renderRestaurants(e.target.value || null);
+    });
+  }
+}
+
+/* ============================================================
+   ⑨ INTERSECTION OBSERVER — scroll-reveal animations
+   ============================================================ */
+
+function initScrollReveal() {
+  const options = {
+    root:       null,
+    rootMargin: '0px 0px -60px 0px',
+    threshold:  0.12,
+  };
+
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('in-view');
+        // Unobserve after triggered (one-shot)
+        observer.unobserve(entry.target);
+      }
+    });
+  }, options);
+
+  // Elements with reveal classes
+  document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale')
+    .forEach((el) => observer.observe(el));
+
+  // Stagger containers
+  document.querySelectorAll('.stagger-children')
+    .forEach((el) => observer.observe(el));
+}
+
+/* ============================================================
+   ⑩ REVEAL CLASS ASSIGNMENT — add reveal classes to sections
+   ============================================================ */
+
+function assignRevealClasses() {
+  // Section headings
+  document.querySelectorAll('.section-heading, .restaurants-section h3')
+    .forEach((el) => el.classList.add('reveal'));
+
+  // Explore section headings + pill lists
+  document.querySelectorAll('.explore-section h4, .explore-section h5, .explore-section h6')
+    .forEach((el) => el.classList.add('reveal'));
+
+  document.querySelectorAll('.explore-section ul')
+    .forEach((el) => el.classList.add('reveal'));
+
+  // Footer columns
+  document.querySelectorAll('footer > div:nth-child(2) > ul')
+    .forEach((el, i) => {
+      el.classList.add(i % 2 === 0 ? 'reveal-left' : 'reveal-right');
+    });
+
+  document.querySelector('footer > div:last-child')
+    ?.classList.add('reveal');
+}
+
+/* ============================================================
+   ⑪ SEARCH — live filter for restaurant cards
+   ============================================================ */
+
+function initSearch() {
+  const searchInput = document.getElementById('search');
+  if (!searchInput) return;
+
+  let debounceTimer;
+
+  searchInput.addEventListener('input', (e) => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      const query = e.target.value.toLowerCase().trim();
+      filterRestaurants(query);
+    }, 250);
+  });
+
+  // Clear on Escape
+  searchInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      searchInput.value = '';
+      filterRestaurants('');
+    }
+  });
+}
+
+/**
+ * Shows/hides restaurant cards based on the search query.
+ * Matches against name and cuisine fields.
+ */
+function filterRestaurants(query) {
+  const grid = document.getElementById('restaurants-grid');
+  if (!grid) return;
+
+  const cards = grid.querySelectorAll('.restaurant-card');
+  if (!cards.length) return;
+
+  cards.forEach((card) => {
+    const name    = card.querySelector('.card-name')?.textContent.toLowerCase() || '';
+    const cuisine = card.querySelector('.card-cuisine')?.textContent.toLowerCase() || '';
+    const matches = !query || name.includes(query) || cuisine.includes(query);
+
+    card.style.transition = 'opacity 0.2s ease, transform 0.2s ease';
+    card.style.opacity    = matches ? '1' : '0.2';
+    card.style.transform  = matches ? '' : 'scale(0.97)';
+    card.style.pointerEvents = matches ? '' : 'none';
+  });
+}
+
+/* ============================================================
+   ⑫ RIPPLE EFFECT UTILITY
+   ============================================================ */
+
+/**
+ * Creates a Material-style ripple on any element.
+ * @param {MouseEvent} e
+ * @param {HTMLElement} el
+ */
+function createRipple(e, el) {
+  const existing = el.querySelector('.ripple');
+  if (existing) existing.remove();
+
+  const rect   = el.getBoundingClientRect();
+  const size   = Math.max(rect.width, rect.height);
+  const x      = e.clientX - rect.left - size / 2;
+  const y      = e.clientY - rect.top  - size / 2;
+
+  const ripple = document.createElement('span');
+  ripple.className = 'ripple';
+  Object.assign(ripple.style, {
+    position:     'absolute',
+    width:        `${size}px`,
+    height:       `${size}px`,
+    left:         `${x}px`,
+    top:          `${y}px`,
+    background:   'rgba(226, 55, 68, 0.18)',
+    borderRadius: '50%',
+    transform:    'scale(0)',
+    animation:    'ripple-anim 0.5s ease-out forwards',
+    pointerEvents:'none',
+  });
+
+  el.style.position = 'relative';
+  el.style.overflow = 'hidden';
+  el.appendChild(ripple);
+
+  ripple.addEventListener('animationend', () => ripple.remove());
+}
+
+// Inject ripple keyframes once
+(function injectRippleKeyframes() {
+  if (document.getElementById('ripple-kf')) return;
+  const style = document.createElement('style');
+  style.id = 'ripple-kf';
+  style.textContent = `
+    @keyframes ripple-anim {
+      to { transform: scale(2.5); opacity: 0; }
+    }
+  `;
+  document.head.appendChild(style);
 })();
+
+/* ============================================================
+   ⑬ SMOOTH SCROLLING (belt-and-suspenders for older browsers)
+   ============================================================ */
+
+function initSmoothScrollLinks() {
+  document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
+    anchor.addEventListener('click', (e) => {
+      const target = document.querySelector(anchor.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  });
+}
+
+/* ============================================================
+   ⑭ HEADER — location selector animated indicator
+   ============================================================ */
+
+function initLocationIndicator() {
+  const select = document.getElementById('place');
+  const li = select?.closest('li');
+  if (!li || !select) return;
+
+  // Add the header-location class for styling
+  li.classList.add('header-location');
+
+  select.addEventListener('change', () => {
+    // Brief pulse on location change
+    li.style.transition = 'transform 0.2s ease';
+    li.style.transform  = 'scale(1.05)';
+    setTimeout(() => { li.style.transform = ''; }, 200);
+  });
+}
+
+/* ============================================================
+   ⑮ MAIN INIT — runs when DOM is ready
+   ============================================================ */
+
+function init() {
+  initLoadingScreen();
+  classifySections();
+  initStickyHeader();
+  initFoodItems();
+  initBrandItems();
+  initExploreSection();
+  initRestaurantSection();
+  initSearch();
+  initLocationIndicator();
+  initSmoothScrollLinks();
+
+  // Assign reveal classes BEFORE initialising observer
+  assignRevealClasses();
+
+  // Small delay so elements are in DOM and positioned before observing
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      initScrollReveal();
+    });
+  });
+}
+
+/* ---- Kickoff ---- */
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
+}
