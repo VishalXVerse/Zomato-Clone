@@ -885,7 +885,7 @@ footer > div:nth-child(3) {
 }
 
 /* Legal text */
-footer > div:last-child {
+footer > div:nth-child(4) {
   padding-top: 24px;
   font-size: 0.78rem;
   color: rgba(255, 255, 255, 0.35);
