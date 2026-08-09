@@ -1,23 +1,5 @@
-/* ============================================================
-   ZOMATO — script.js
-   Features:
-     1.  Loading screen
-     2.  Sticky header with scroll class
-     3.  DOM enhancement — food items (circular + label)
-     4.  DOM enhancement — brand items (circular + label)
-     5.  Restaurant cards — location-driven dynamic rendering
-     6.  Intersection Observer — scroll reveal animations
-     7.  Search live filter
-     8.  Smooth section initialisation
-   ============================================================ */
 
 'use strict';
-
-/* ============================================================
-   ① DATA — Restaurant catalogue per city
-   ============================================================ */
-
-/** Colour swatches used to generate placeholder gradients */
 const GRAD_PALETTES = [
   ['#FF6B6B', '#FFE66D'],
   ['#a18cd1', '#fbc2eb'],
@@ -31,13 +13,7 @@ const GRAD_PALETTES = [
   ['#30cfd0', '#667eea'],
 ];
 
-/** Returns a deterministic gradient for a given index */
 const gradFor = (i) => GRAD_PALETTES[i % GRAD_PALETTES.length];
-
-/**
- * Restaurant data keyed by location value (matches <select> options).
- * Each entry: { name, cuisine, discount, rating, mins, km }
- */
 const RESTAURANT_DATA = {
   Bangalore: [
     { name: "Meghana Foods",       cuisine: "Biryani, North Indian",  discount: "50% off up to ₹100", rating: 4.3, mins: "25–30 min", km: "1.2 km" },
@@ -103,14 +79,6 @@ const RESTAURANT_DATA = {
   ],
 };
 
-/* ============================================================
-   ② LOADING SCREEN
-   ============================================================ */
-
-/**
- * Injects a loading overlay into the DOM and removes it once
- * the page has finished loading.
- */
 function initLoadingScreen() {
   const screen = document.createElement('div');
   screen.id = 'loading-screen';
@@ -121,10 +89,10 @@ function initLoadingScreen() {
   `;
   document.body.prepend(screen);
 
-  // Remove screen after animation + small buffer
+ 
   const dismiss = () => {
     screen.classList.add('fade-out');
-    // Remove from DOM after transition finishes
+    
     screen.addEventListener('transitionend', () => screen.remove(), { once: true });
   };
 
@@ -135,9 +103,7 @@ function initLoadingScreen() {
   }
 }
 
-/* ============================================================
-   ③ STICKY HEADER — scroll class
-   ============================================================ */
+
 
 function initStickyHeader() {
   const header = document.querySelector('header');
@@ -159,10 +125,6 @@ function initStickyHeader() {
   onScroll(); // run once on init
 }
 
-/* ============================================================
-   ④ SECTION CLASSIFICATION
-   Adds meaningful class names to each section for CSS targeting.
-   ============================================================ */
 
 function classifySections() {
   const sections = document.querySelectorAll('main > section');
@@ -172,9 +134,6 @@ function classifySections() {
   });
 }
 
-/* ============================================================
-   ⑤ FOOD ITEMS — enhance li > img into circular components
-   ============================================================ */
 
 function initFoodItems() {
   const section = document.querySelector('.food-section');
@@ -192,7 +151,7 @@ function initFoodItems() {
 
   ul.classList.add('food-items-grid', 'stagger-children');
 
-  // Transform each li > img into a rich food-item component
+  
   ul.querySelectorAll('li').forEach((li) => {
     const img = li.querySelector('img');
     if (!img) return;
@@ -200,12 +159,12 @@ function initFoodItems() {
     const label = img.alt || '';
     li.classList.add('food-item');
 
-    // Wrap image in styled ring
+   
     const ring = document.createElement('div');
     ring.className = 'food-img-ring';
     ring.appendChild(img);
 
-    // Label text
+    
     const span = document.createElement('span');
     span.className = 'food-label';
     span.textContent = label;
@@ -214,20 +173,18 @@ function initFoodItems() {
     li.appendChild(ring);
     li.appendChild(span);
 
-    // Ripple effect on click
+    
     li.addEventListener('click', (e) => createRipple(e, li));
   });
 }
 
-/* ============================================================
-   ⑥ BRAND ITEMS — same treatment as food items
-   ============================================================ */
+
 
 function initBrandItems() {
   const section = document.querySelector('.brands-section');
   if (!section) return;
 
-  // Wrap content in a constrained inner div
+ 
   const inner = document.createElement('div');
   inner.className = 'brands-inner';
   while (section.firstChild) inner.appendChild(section.firstChild);
@@ -267,9 +224,7 @@ function initBrandItems() {
   });
 }
 
-/* ============================================================
-   ⑦ EXPLORE SECTION — structural cleanup
-   ============================================================ */
+
 
 function initExploreSection() {
   const section = document.querySelector('.explore-section');
@@ -286,15 +241,7 @@ function initExploreSection() {
   if (eyebrow) eyebrow.classList.add('explore-eyebrow');
 }
 
-/* ============================================================
-   ⑧ RESTAURANT CARDS — dynamic generation
-   ============================================================ */
 
-/**
- * Creates and returns a single restaurant card element.
- * @param {Object} data  — restaurant object from RESTAURANT_DATA
- * @param {number} index — position for gradient selection
- */
 function createRestaurantCard(data, index) {
   const [c1, c2] = gradFor(index);
   const card = document.createElement('div');
@@ -337,9 +284,7 @@ function createRestaurantCard(data, index) {
   return card;
 }
 
-/**
- * Returns a food emoji that loosely matches the cuisine string.
- */
+
 function foodEmoji(cuisine = '') {
   const c = cuisine.toLowerCase();
   if (c.includes('pizza'))   return '🍕';
@@ -357,9 +302,7 @@ function foodEmoji(cuisine = '') {
   return '🍽️';
 }
 
-/**
- * Renders skeleton placeholders while "loading".
- */
+
 function renderSkeletons(grid, count = 4) {
   grid.innerHTML = '';
   for (let i = 0; i < count; i++) {
@@ -377,10 +320,7 @@ function renderSkeletons(grid, count = 4) {
   }
 }
 
-/**
- * Renders restaurant cards for the given location value.
- * Shows a brief skeleton delay to feel "real".
- */
+
 function renderRestaurants(locationValue) {
   const grid = document.getElementById('restaurants-grid');
   const heading = document.querySelector('.restaurants-section h3');
@@ -441,12 +381,10 @@ function renderRestaurants(locationValue) {
         requestAnimationFrame(() => card.classList.add('in-view'));
       });
     });
-  }, 550); // simulate API delay
+  }, 550); 
 }
 
-/**
- * Wires up the location <select> to re-render restaurants on change.
- */
+
 function initRestaurantSection() {
   const section = document.querySelector('.restaurants-section');
   if (!section) return;
@@ -471,9 +409,7 @@ function initRestaurantSection() {
   }
 }
 
-/* ============================================================
-   ⑨ INTERSECTION OBSERVER — scroll-reveal animations
-   ============================================================ */
+
 
 function initScrollReveal() {
   const options = {
@@ -501,9 +437,7 @@ function initScrollReveal() {
     .forEach((el) => observer.observe(el));
 }
 
-/* ============================================================
-   ⑩ REVEAL CLASS ASSIGNMENT — add reveal classes to sections
-   ============================================================ */
+
 
 function assignRevealClasses() {
   // Section headings
@@ -527,9 +461,7 @@ function assignRevealClasses() {
     ?.classList.add('reveal');
 }
 
-/* ============================================================
-   ⑪ SEARCH — live filter for restaurant cards
-   ============================================================ */
+
 
 function initSearch() {
   const searchInput = document.getElementById('search');
@@ -545,7 +477,7 @@ function initSearch() {
     }, 250);
   });
 
-  // Clear on Escape
+ 
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
       searchInput.value = '';
@@ -554,10 +486,7 @@ function initSearch() {
   });
 }
 
-/**
- * Shows/hides restaurant cards based on the search query.
- * Matches against name and cuisine fields.
- */
+
 function filterRestaurants(query) {
   const grid = document.getElementById('restaurants-grid');
   if (!grid) return;
@@ -577,15 +506,7 @@ function filterRestaurants(query) {
   });
 }
 
-/* ============================================================
-   ⑫ RIPPLE EFFECT UTILITY
-   ============================================================ */
 
-/**
- * Creates a Material-style ripple on any element.
- * @param {MouseEvent} e
- * @param {HTMLElement} el
- */
 function createRipple(e, el) {
   const existing = el.querySelector('.ripple');
   if (existing) existing.remove();
@@ -630,9 +551,7 @@ function createRipple(e, el) {
   document.head.appendChild(style);
 })();
 
-/* ============================================================
-   ⑬ SMOOTH SCROLLING (belt-and-suspenders for older browsers)
-   ============================================================ */
+
 
 function initSmoothScrollLinks() {
   document.querySelectorAll('a[href^="#"]').forEach((anchor) => {
@@ -646,29 +565,25 @@ function initSmoothScrollLinks() {
   });
 }
 
-/* ============================================================
-   ⑭ HEADER — location selector animated indicator
-   ============================================================ */
+
 
 function initLocationIndicator() {
   const select = document.getElementById('place');
   const li = select?.closest('li');
   if (!li || !select) return;
 
-  // Add the header-location class for styling
+ 
   li.classList.add('header-location');
 
   select.addEventListener('change', () => {
-    // Brief pulse on location change
+    
     li.style.transition = 'transform 0.2s ease';
     li.style.transform  = 'scale(1.05)';
     setTimeout(() => { li.style.transform = ''; }, 200);
   });
 }
 
-/* ============================================================
-   ⑮ MAIN INIT — runs when DOM is ready
-   ============================================================ */
+
 
 function init() {
   initLoadingScreen();
@@ -682,7 +597,7 @@ function init() {
   initLocationIndicator();
   initSmoothScrollLinks();
 
-  // Assign reveal classes BEFORE initialising observer
+ 
   assignRevealClasses();
 
   // Small delay so elements are in DOM and positioned before observing
@@ -693,7 +608,7 @@ function init() {
   });
 }
 
-/* ---- Kickoff ---- */
+
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
