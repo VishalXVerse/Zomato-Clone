@@ -1,11 +1,4 @@
-/* ============================================================
-   ZOMATO — style.css
-   Theme   : Red & White  |  Modern Premium Aesthetic
-   Fonts   : Syne (headings) + Nunito (body)
-   Author  : AI-generated for Vishal's Zomato clone project
-   ============================================================ */
 
-/* ---- 1. Google Fonts ---- */
 @import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Nunito:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
 /* ---- 2. CSS Custom Properties ---- */
@@ -750,7 +743,7 @@ section {
   50%       { transform: translateY(-8px); }
 }
 
-/* ---- 11. Section 4 — Explore Options ---- */
+
 .explore-section {
   background: var(--gray-50);
   border-top: 1px solid var(--gray-200);
@@ -893,9 +886,7 @@ footer > div:nth-child(4) {
   max-width: 700px;
 }
 
-/* ---- 13. Scroll Reveal Animations ---- */
 
-/* Base reveal state */
 .reveal,
 .reveal-left,
 .reveal-right,
@@ -1104,7 +1095,7 @@ footer > div:nth-child(4) {
   }
 }
 
-/* Accessibility: respect reduced motion */
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1123,4 +1114,5 @@ footer > div:nth-child(4) {
     transform: none;
   }
 }
-/* vishal */
+/* made by vishal */
+/* more things to add :  */
